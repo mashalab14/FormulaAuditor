@@ -39,9 +39,13 @@ function applyFormatting(styles) {
   const sheet = ss.getActiveSheet();
   const sheetName = sheet.getName();
 
-  const range = sheet.getDataRange().trimWhitespace(); // ✅ Process only the used range
+  const range = sheet.getDataRange(); // ✅ Removed trimWhitespace() to avoid write-operation interference
   const numRows = range.getNumRows();
   const numCols = range.getNumColumns();
+
+  // ✅ Debug Logging: Print sheet info
+  console.log("🔍 DEBUG: Active Sheet Name:", sheetName);
+  console.log("🔍 DEBUG: Data Range Dimensions:", numRows, "rows x", numCols, "cols");
 
   const formulas = range.getFormulas(); // ✅ Get all formulas at once
   const formulaPositions = [];
@@ -58,11 +62,20 @@ function applyFormatting(styles) {
  // ✅ Step 1: Pre-filter formula positions before looping
   for (let row = 0; row < numRows; row++) {
     for (let col = 0; col < numCols; col++) {
-      if (formulas[row][col] && formulas[row][col].startsWith("=")) {
+      const cellValue = formulas[row][col];
+      // ✅ Safety Check: Ensure proper detection of formulas
+      if (cellValue && cellValue.toString().startsWith("=")) {
         formulaPositions.push([row, col]);
+        // ✅ Debug Logging: Print first 3 formulas detected
+        if (formulaPositions.length <= 3) {
+          console.log(`🔍 DEBUG: Formula ${formulaPositions.length} at [${row}, ${col}]:`, cellValue);
+        }
       }
     }
   }
+
+  // ✅ Debug Logging: Total formulas found
+  console.log("🔍 DEBUG: Total formula cells found:", formulaPositions.length);
 
   // ✅ Step 2: Iterate only over formula cells
   for (let i = 0; i < formulaPositions.length; i++) {
