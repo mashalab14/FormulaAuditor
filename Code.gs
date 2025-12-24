@@ -39,13 +39,18 @@ function applyFormatting(styles) {
   const sheet = ss.getActiveSheet();
   const sheetName = sheet.getName();
 
-  const range = sheet.getDataRange(); // ✅ Removed trimWhitespace() to avoid write-operation interference
+  // ✅ Force full grid range instead of getDataRange() to avoid glitches
+  const range = sheet.getRange(1, 1, sheet.getMaxRows(), sheet.getMaxColumns());
   const numRows = range.getNumRows();
   const numCols = range.getNumColumns();
 
   // ✅ Debug Logging: Print sheet info
   console.log("🔍 DEBUG: Active Sheet Name:", sheetName);
   console.log("🔍 DEBUG: Data Range Dimensions:", numRows, "rows x", numCols, "cols");
+  
+  // ✅ Aggressive verification: Check A1 specifically
+  console.log("🔍 DEBUG: A1 Value:", range.getCell(1, 1).getValue());
+  console.log("🔍 DEBUG: A1 Formula:", range.getCell(1, 1).getFormula());
 
   const formulas = range.getFormulas(); // ✅ Get all formulas at once
   const formulaPositions = [];
