@@ -9,7 +9,7 @@
 function onOpen() {
   const ui = SpreadsheetApp.getUi();
   ui.createMenu('Formula Auditor')
-    .addItem('🎨 Format Formulas', 'showFormatSidebar')
+    .addItem('🎨 Format Formula Cells', 'showFormatSidebar')
     .addToUi();
 }
 
