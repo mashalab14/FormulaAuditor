@@ -421,7 +421,7 @@
             setBusy(false);
             showBanner('Error: ' + toErrorMessage(err), true);
           })
-          .addActiveCellToWatchM3();
+          .addActiveCellToWatch();
       }
 
       function refreshList() {
@@ -437,7 +437,7 @@
             setBusy(false);
             showBanner('Error: ' + toErrorMessage(err), true);
           })
-          .getWatchListM3();
+          .getWatchList();
       }
 
       function removeItem(id) {
@@ -454,7 +454,7 @@
             if (row) row.style.opacity = '1';
             showBanner('Error: ' + toErrorMessage(err), true);
           })
-          .removeWatchItemM3(id);
+          .removeWatchItem(id);
       }
 
       function removeMissing() {
@@ -472,7 +472,7 @@
             setBusy(false);
             showBanner('Error: ' + toErrorMessage(err), true);
           })
-          .removeMissingWatchesM3();
+          .removeMissingWatches();
       }
 
       function jumpTo(sheetId, row, col) {
@@ -490,7 +490,7 @@
             setBusy(false);
             showBanner('Error: ' + toErrorMessage(err), true);
           })
-          .jumpToWatchCellM3(sheetId, row, col);
+          .jumpToWatchCell(sheetId, row, col);
       }
 
       // Initial load
