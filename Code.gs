@@ -30,6 +30,7 @@ function onOpen() {
     // 2. Sidebar Utilities
     .addItem('🎨 Format Formula Cells', 'showFormatSidebar')
     .addItem('👀 Watch Window', 'showTraceDependents')
+    .addItem('👀 Watch Window (M1)', 'showWatchWindowM1')
     
     .addToUi();
 }
@@ -96,5 +97,19 @@ function applyFormatting(styles) {
   writeStylesToSheet(context.range, currentStyles);
 
   return `✅ Formatting applied to ${formattedCount} cells with formulas in Sheet:"${context.sheetName}"`;
+}
+
+// --- MILESTONE 1 TEST FUNCTIONS ---
+
+function showWatchWindowM1() {
+  const html = HtmlService.createHtmlOutputFromFile('WatchWindow_M1')
+    .setTitle('Watch Window M1')
+    .setWidth(300); // Note: sidebar width may not be respected; keep as-is for now.
+  SpreadsheetApp.getUi().showSidebar(html);
+}
+
+function testFetchA1() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  return sheet.getRange(1, 1).getDisplayValue();
 }
 
