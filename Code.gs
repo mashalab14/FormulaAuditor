@@ -32,6 +32,7 @@ function onOpen() {
     .addItem('👀 Watch Window', 'showTraceDependents')
     .addItem('👀 Watch Window (M1)', 'showWatchWindowM1')
     .addItem('👀 Watch Window (M2)', 'showWatchWindowM2')
+    .addItem('👀 Watch Window (M3)', 'showWatchWindowM3')
     
     .addToUi();
 }
@@ -194,5 +195,164 @@ function removeWatchItemM2(idToRemove) {
   const list = JSON.parse(userProps.getProperty('FA_WATCHES') || '[]');
   const next = (Array.isArray(list) ? list : []).filter(item => item.id !== idToRemove);
   userProps.setProperty('FA_WATCHES', JSON.stringify(next));
+}
+
+// --- MILESTONE 3: MANUAL PROFESSIONAL + NATIVE UI ---
+
+function showWatchWindowM3() {
+  const html = HtmlService.createHtmlOutputFromFile('WatchWindow_M3')
+    .setTitle('Watch Window')
+    .setWidth(320); // Note: sidebar width may not be respected; keep as-is.
+  SpreadsheetApp.getUi().showSidebar(html);
+}
+
+/**
+ * Adds the active cell to FA_WATCHES with dedupe.
+ * Dedupe rule: same sheetId + row + col should not be added twice.
+ * Returns: { added: boolean, reason?: string }
+ */
+function addActiveCellToWatchM3() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getActiveSheet();
+  const cell = sheet.getActiveCell();
+
+  const userProps = PropertiesService.getUserProperties();
+  const list = JSON.parse(userProps.getProperty('FA_WATCHES') || '[]');
+  const arr = Array.isArray(list) ? list : [];
+
+  const sheetId = sheet.getSheetId();
+  const row = cell.getRow();
+  const col = cell.getColumn();
+
+  const isDup = arr.some(x => x && x.sheetId === sheetId && x.row === row && x.col === col);
+  if (isDup) {
+    return { added: false, reason: 'DUPLICATE' };
+  }
+
+  const newWatch = {
+    id: Utilities.getUuid(),
+    sheetId: sheetId,
+    row: row,
+    col: col,
+    createdAt: Date.now()
+  };
+
+  arr.push(newWatch);
+  userProps.setProperty('FA_WATCHES', JSON.stringify(arr));
+  return { added: true };
+}
+
+/**
+ * Returns a full refresh payload for the UI.
+ * Must be ONE call to return everything needed to render the list.
+ *
+ * Return shape:
+ * {
+ *   serverNow: number,
+ *   items: Array<
+ *     | { id, sheetId, row, col, status: 'SHEET_MISSING' }
+ *     | { id, sheetId, row, col, sheetName, cellRef, value, status: 'OK', isErrorValue: boolean }
+ *   >
+ * }
+ */
+function getWatchListM3() {
+  const userProps = PropertiesService.getUserProperties();
+  const saved = JSON.parse(userProps.getProperty('FA_WATCHES') || '[]');
+  const arr = Array.isArray(saved) ? saved : [];
+
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+
+  const items = arr.map(item => {
+    const sheet = ss.getSheetById(item.sheetId);
+
+    if (!sheet) {
+      return {
+        id: item.id,
+        sheetId: item.sheetId,
+        row: item.row,
+        col: item.col,
+        status: 'SHEET_MISSING'
+      };
+    }
+
+    const range = sheet.getRange(item.row, item.col);
+    const value = range.getDisplayValue();
+
+    const isErrorValue =
+      typeof value === 'string' &&
+      value.length > 0 &&
+      value[0] === '#'; // simple and reliable for Sheets error display strings
+
+    return {
+      id: item.id,
+      sheetId: item.sheetId,
+      row: item.row,
+      col: item.col,
+      sheetName: sheet.getName(),
+      cellRef: range.getA1Notation(),
+      value: value,
+      status: 'OK',
+      isErrorValue: isErrorValue
+    };
+  });
+
+  return {
+    serverNow: Date.now(),
+    items: items
+  };
+}
+
+/** Removes a specific watch item by ID from FA_WATCHES. Returns { removed: boolean }. */
+function removeWatchItemM3(idToRemove) {
+  const userProps = PropertiesService.getUserProperties();
+  const saved = JSON.parse(userProps.getProperty('FA_WATCHES') || '[]');
+  const arr = Array.isArray(saved) ? saved : [];
+
+  const next = arr.filter(x => x && x.id !== idToRemove);
+  userProps.setProperty('FA_WATCHES', JSON.stringify(next));
+
+  return { removed: next.length !== arr.length };
+}
+
+/** Removes all watches whose sheet is missing. Returns { removedCount: number }. */
+function removeMissingWatchesM3() {
+  const userProps = PropertiesService.getUserProperties();
+  const saved = JSON.parse(userProps.getProperty('FA_WATCHES') || '[]');
+  const arr = Array.isArray(saved) ? saved : [];
+
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+
+  let removedCount = 0;
+  const next = arr.filter(item => {
+    const sheet = ss.getSheetById(item.sheetId);
+    if (!sheet) {
+      removedCount += 1;
+      return false;
+    }
+    return true;
+  });
+
+  userProps.setProperty('FA_WATCHES', JSON.stringify(next));
+  return { removedCount: removedCount };
+}
+
+/**
+ * Jump to a watched cell by sheetId + row + col.
+ * Must survive sheet rename.
+ * Returns { ok: boolean, reason?: string }.
+ */
+function jumpToWatchCellM3(sheetId, row, col) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetById(sheetId);
+  if (!sheet) return { ok: false, reason: 'SHEET_MISSING' };
+
+  try {
+    ss.setActiveSheet(sheet);
+    const range = sheet.getRange(row, col);
+    sheet.setActiveRange(range);
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, reason: 'RANGE_ERROR' };
+  }
 }
 
