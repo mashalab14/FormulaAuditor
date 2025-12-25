@@ -47,6 +47,7 @@
       .subtitle {
         font-size: 11px;
         color: var(--muted-light);
+        display: none;
       }
 
       .toolbar {
@@ -326,7 +327,14 @@
       }
 
       function updateLastRefreshed(serverNow) {
-        document.getElementById('lastRefreshed').innerText = 'Last refreshed: ' + formatTime(serverNow);
+        const subtitle = document.getElementById('lastRefreshed');
+        if (serverNow && typeof serverNow === 'number' && serverNow > 0) {
+          subtitle.innerText = 'Last refreshed: ' + formatTime(serverNow);
+          subtitle.style.display = 'inline';
+        } else {
+          subtitle.innerText = '';
+          subtitle.style.display = 'none';
+        }
       }
 
       function updateFooterVisibility(hasMissing) {

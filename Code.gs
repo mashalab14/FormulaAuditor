@@ -201,7 +201,7 @@ function removeWatchItemM2(idToRemove) {
 
 function showWatchWindowM3() {
   const html = HtmlService.createHtmlOutputFromFile('WatchWindow_M3')
-    .setTitle('Watch Window')
+    .setTitle('Formula Auditor')
     .setWidth(320); // Note: sidebar width may not be respected; keep as-is.
   SpreadsheetApp.getUi().showSidebar(html);
 }
