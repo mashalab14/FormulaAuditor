@@ -19,11 +19,11 @@
 function onOpen() {
   const ui = SpreadsheetApp.getUi();
   ui.createMenu('Formula Auditor')
-    // 1. Core Graph Features
-    .addItem('🔍 Trace Precedents', 'showTraceDependents') 
+    // F001-Precedence: Add Trace Precedents menu item
+    .addItem('🔍 Trace Precedents', 'showTracePrecedents') 
     .addItem('🔄 Trace Dependents', 'showTraceDependents') // Placeholder
     .addItem('❌ Trace Errors', 'showTraceErrors')         // Placeholder
-    .addItem('🏷️ Named Range Dependency', 'showTraceDependents')
+//    .addItem('🏷️ Named Range Dependency', 'showTraceDependents')
     
     .addSeparator()
     
@@ -40,6 +40,13 @@ function showTraceDependents() {
 
 function showTraceErrors() {
   SpreadsheetApp.getUi().alert("Coming Soon: Trace Errors Graph");
+}
+// F001-Precedence: Placeholder for Trace Precedents logic
+function showTracePrecedents() {
+  const html = HtmlService.createHtmlOutputFromFile('DependencyGraph.html')
+    .setTitle('Trace Precedents')
+    .setWidth(400);
+  SpreadsheetApp.getUi().showSidebar(html);
 }
 /**
  * Shows the unified Formula Auditor sidebar with specified initial tab
@@ -266,3 +273,32 @@ function jumpToWatchCell(sheetId, row, col) {
   }
 }
 
+// F001-Precedence: Backend tracer logic for "Trace Precedents"
+function getErrorTracerData() {
+  const cell = SpreadsheetApp.getActiveSpreadsheet().getActiveCell();
+  const sheet = cell.getSheet();
+  const formula = cell.getFormula();
+  const sheetName = sheet.getName();
+  const selectedRef = `${sheetName}!${cell.getA1Notation()}`;
+
+  if (!formula) {
+    return {
+      error: "Active cell does not contain a formula.",
+      selectedRef: selectedRef
+    };
+  }
+
+  const traced = getDependencies(cell); // Assumes getDependencies is defined elsewhere
+
+  return {
+    selectedRef: selectedRef,
+    sheetName: sheetName,
+    selectedCell: cell.getA1Notation(),
+    precedents: traced.precedents || [],
+    precedentLevels: traced.levelMap || {},
+    cellDetails: traced.cellMap || {},
+    edges: traced.edges || [],
+    errorPathNodes: traced.errorPathNodes || [],
+    errorPathEdges: traced.errorPathEdges || []
+  };
+}

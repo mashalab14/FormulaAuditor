@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis/4.21.0/vis.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/vis/4.21.0/vis.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.4.0/jspdf.umd.min.js"></script>
+  <title>Dependency Graph</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+    }
+
+    #network {
+      width: 100%;
+      height: 500px;
+    }
+
+    .tooltip {
+      position: absolute;
+      background: white;
+      color: black;
+      border: 1px solid #ccc;
+      padding: 8px;
+      border-radius: 6px;
+      font-size: 12px;
+      display: none;
+      z-index: 10;
+      box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.2);
+      cursor: grab; /* Indicate draggable tooltips */
+
+    }
+
+    .menu-button {
+      position: fixed;
+      top: 10px;
+      right: 20px;
+      font-size: 16px;
+      cursor: pointer;
+      border: none;
+      background: none;
+      color: #000;
+      transition: transform 0.2s ease-in-out;
+      z-index: 999;
+    }
+
+    .menu-button:hover {
+      transform: scale(1.2);
+    }
+
+    .dropdown {
+      position: absolute;
+      top: 40px;
+      right: 20px;
+      display: none;
+      background-color: white;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.2);
+      z-index: 1000;
+    }
+
+    .dropdown a {
+      display: block;
+      padding: 10px;
+      text-decoration: none;
+      color: black;
+      font-size: 14px;
+    }
+
+    .dropdown a:hover {
+      background-color: #ddd;
+    }
+
+    .zoom-buttons {
+      position: absolute;
+      bottom: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 20px;
+      z-index: 997;      
+    }
+
+    .zoom-button {
+      background: white;
+      border: 2px solid black;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 20px;
+      cursor: pointer;
+      transition: transform 0.2s ease-in-out;
+    }
+
+    .zoom-button:hover {
+      transform: scale(1.2);
+    }
+
+    /* Submenu styling */
+    .submenu {
+      position: relative;
+    }
+
+    .submenu-dropdown {
+      display: none;
+      position: absolute;
+      left: 0; /* Align submenu with parent menu */
+      top: 25px;
+      background-color: white;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.2);
+      z-index: 1000;
+    }
+
+    .submenu-dropdown a {
+      display: block;
+      padding: 10px;
+      text-decoration: none;
+      color: black;
+      font-size: 14px;
+    }
+
+    .submenu-dropdown a:hover {
+      background-color: #ddd;
+    }
+  </style>
+</head>
+<body>
+  <!-- Menu button -->
+  <div class="menu-button" id="menuButton" onclick="toggleDropdown()">⋮</div>
+  <div class="dropdown" id="menuDropdown">
+    <a href="#" id="toggleDetails" onclick="toggleDetailsVisibility()">Show Cell/Range Details</a>
+    <div class="submenu">
+      <a href="#" onclick="toggleSubmenu()">Download ▼</a>
+      <div class="submenu-dropdown" id="submenuDropdown">
+        <a href="#" onclick="downloadAsImage()">Download as PNG</a>
+        <a href="#" onclick="downloadAsPDF()">Download as PDF</a>
+      </div>
+    </div>
+  </div>
+
+  <div id="network"></div>
+  <div class="tooltip" id="tooltip"></div>
+  <div class="zoom-buttons">
+    <div class="zoom-button" onclick="zoomOut()">-</div>
+    <div class="zoom-button" onclick="zoomIn()">+</div>
+  </div>
+
+  <script>
+    // Globals
+    let dropdownOpen = false;
+    let detailsVisible = false;
+    let submenuOpen = false;
+    let network; // Global network instance
+
+    /**
+     * Toggles the visibility of the main dropdown menu.
+     */
+    function toggleDropdown() {
+      const dropdown = document.getElementById('menuDropdown');
+      dropdown.style.display = dropdownOpen ? 'none' : 'block';
+      dropdownOpen = !dropdownOpen;
+    }
+
+/**************************************************
+* Toggles the visibility of cell/range details.
+* Displays tooltips near nodes or hides them.
+**************************************************/
+    function toggleDetailsVisibility() {
+      const toggleDetailsMenu = document.getElementById('toggleDetails');
+      detailsVisible = !detailsVisible;
+      toggleDetailsMenu.textContent = detailsVisible
+        ? 'Hide Cell/Range Details'
+        : 'Show Cell/Range Details';
+
+      const nodes = network.body.data.nodes.get();
+      nodes.forEach((node) => {
+        const tooltipId = `tooltip-${node.id}`;
+        let tooltip = document.getElementById(tooltipId);
+
+        if (detailsVisible) {
+          if (!tooltip) {
+            tooltip = document.createElement('div');
+            tooltip.id = tooltipId;
+            tooltip.className = 'tooltip';         
+            tooltip.innerHTML = `
+            <strong>Sheet:</strong> ${node.tooltipContent?.sheet || 'N/A'}<br>
+            <strong>Cell:</strong> ${node.tooltipContent?.cell || 'N/A'}<br>
+            <strong>Formula:</strong> ${node.tooltipContent?.formula || 'N/A'}<br>
+            <strong>Value:</strong> ${node.tooltipContent?.value || 'N/A'}<br>
+            ${node.tooltipContent?.isCrossSheet ? '<strong>Note:</strong> Cross-Sheet Reference' : ''}
+            `;
+
+            document.body.appendChild(tooltip);
+           // Make the tooltip draggable
+            makeTooltipDraggable(tooltip);
+          }
+          const position = network.getPositions([node.id])[node.id];
+          const canvasPos = network.canvasToDOM(position);
+          tooltip.style.left = `${canvasPos.x + 10}px`;
+          tooltip.style.top = `${canvasPos.y + 10}px`;
+          tooltip.style.display = 'block';
+        } else {
+          if (tooltip) tooltip.remove();
+        }
+      });
+    }
+/**************************************************
+* Contain tooltip within Canvas
+**************************************************/
+function adjustTooltipPosition(tooltip, x, y) {
+  const canvas = document.getElementById('network');
+  const canvasRect = canvas.getBoundingClientRect(); // Get canvas dimensions
+  const tooltipRect = tooltip.getBoundingClientRect(); // Get tooltip dimensions
+
+  // Adjust left/right boundaries
+  if (x + tooltipRect.width > canvasRect.right) {
+    x = canvasRect.right - tooltipRect.width - 10; // Adjust to fit within canvas
+  } else if (x < canvasRect.left) {
+    x = canvasRect.left + 10; // Prevent overflow to the left
+  }
+
+  // Adjust top/bottom boundaries
+  if (y + tooltipRect.height > canvasRect.bottom) {
+    y = canvasRect.bottom - tooltipRect.height - 10; // Adjust to fit within canvas
+  } else if (y < canvasRect.top) {
+    y = canvasRect.top + 10; // Prevent overflow to the top
+  }
+
+  // Apply the adjusted position
+  tooltip.style.left = `${x}px`;
+  tooltip.style.top = `${y}px`;
+}
+
+/**************************************************
+* Toggles the visibility of the submenu under 'Download'.
+**************************************************/
+    function toggleSubmenu() {
+      const submenu = document.getElementById('submenuDropdown');
+      submenu.style.display = submenuOpen ? 'none' : 'block';
+      submenuOpen = !submenuOpen;
+    }
+
+    // Ensure submenu and main dropdown close when clicking outside
+    window.addEventListener('click', (event) => {
+      const dropdown = document.getElementById('menuDropdown');
+      const submenu = document.getElementById('submenuDropdown');
+      const menuButton = document.getElementById('menuButton');
+
+      if (
+        !dropdown.contains(event.target) &&
+        !submenu.contains(event.target) &&
+        event.target !== menuButton
+      ) {
+        dropdown.style.display = 'none';
+        submenu.style.display = 'none';
+        dropdownOpen = false;
+        submenuOpen = false;
+      }
+    });
+
+/**************************************************
+* Calculates evenly spaced positions for nodes.
+**************************************************/
+    function calculateNodePosition(nodeCount, centerX, centerY, radius, startAngle = 0) {
+      const positions = [];
+      const angleStep = Math.PI / (nodeCount + 1);
+
+      for (let i = 0; i < nodeCount; i++) {
+        const angle = startAngle + (i + 1) * angleStep;
+        positions.push({
+          x: centerX + radius * Math.cos(angle),
+          y: centerY + radius * Math.sin(angle),
+        });
+      }
+      return positions;
+    }
+
+/**************************************************
+* Draws the dependency graph and sets up interactions.
+**************************************************/
+function drawDependencyGraph(data) {
+  const { selectedCell, precedents, dependents, cellDetails } = data;
+  const nodes = new vis.DataSet();
+  const edges = new vis.DataSet();
+
+  const centerX = 0;
+  const centerY = 0;
+  const radius = 150;
+
+  // Add selected cell as the center node
+  nodes.add({
+    id: 'selected',
+    label: cellDetails[selectedCell]?.cell, // Only display the cell reference
+    x: centerX,
+    y: centerY,
+    color: { background: 'red', 
+             border: null
+          },
+    borderWidth: 0,
+    font: { color: '#fff',
+            size: 10,         // Smaller font size
+            face: 'Arial',    // Clean and sharp sans-serif font
+     },
+    tooltipContent: {
+      sheet: cellDetails[selectedCell]?.sheet || 'N/A',
+      cell: cellDetails[selectedCell]?.cell || selectedCell,
+      formula: cellDetails[selectedCell]?.formula || 'N/A',
+      value: cellDetails[selectedCell]?.value || 'N/A',
+    },
+  });
+
+  // Add precedents
+  const precedentPositions = calculateNodePosition(precedents.length, centerX, centerY, radius, Math.PI);
+  precedents.forEach((precedent, index) => {
+    const isCrossSheet = cellDetails[precedent]?.isCrossSheet || false;
+    nodes.add({
+      id: `p${index}`,
+      label: cellDetails[precedent]?.cell + (isCrossSheet ? '*' : ''), // Cell reference only, with '*' for cross-sheet
+      x: precedentPositions[index].x,
+      y: precedentPositions[index].y,
+      color: { background: isCrossSheet ? '#ff6d01' : '#0000ff', border: null},
+      borderWidth: 0,
+      font: { color: '#fff',
+              size: 10,         // Smaller font size
+              face: 'Arial',    // Clean and sharp sans-serif font 
+              },
+      tooltipContent: {
+        sheet: cellDetails[precedent]?.sheet || 'N/A',
+        cell: cellDetails[precedent]?.cell || precedent,
+        formula: cellDetails[precedent]?.formula || 'N/A',
+        value: cellDetails[precedent]?.value || 'N/A',
+      },
+    });
+    edges.add({ from: `p${index}`, to: 'selected', arrows: 'to' });
+  });
+
+  // Add dependents
+  const dependentPositions = calculateNodePosition(dependents.length, centerX, centerY, radius, 0);
+  dependents.forEach((dependent, index) => {
+    const isCrossSheet = cellDetails[dependent]?.isCrossSheet || false;
+    nodes.add({
+      id: `d${index}`,
+      label: cellDetails[dependent]?.cell + (isCrossSheet ? '*' : ''), // Cell reference only, with '*' for cross-sheet
+      x: dependentPositions[index].x,
+      y: dependentPositions[index].y,
+      color: { background: isCrossSheet ? '#ff6d01' : '#38761d',
+                   border: null},
+      borderWidth: 0,
+      font: { color: '#fff',
+              size: 10,         // Smaller font size
+              face: 'Arial',    // Clean and sharp sans-serif font 
+              },
+      tooltipContent: {
+        sheet: cellDetails[dependent]?.sheet || 'N/A',
+        cell: cellDetails[dependent]?.cell || dependent,
+        formula: cellDetails[dependent]?.formula || 'N/A',
+        value: cellDetails[dependent]?.value || 'N/A',
+      },
+    });
+    edges.add({ from: 'selected', to: `d${index}`, arrows: 'to' });
+  });
+
+  // Initialize the network graph
+  const container = document.getElementById('network');
+  network = new vis.Network(container, { nodes, edges }, {
+    physics: false,
+    interaction: { hover: true },
+  });
+
+  // Show tooltip on hover
+  network.on('hoverNode', (params) => {
+    const node = nodes.get(params.node);
+    const tooltip = document.getElementById('tooltip');
+    tooltip.innerHTML = `
+      <strong>Sheet:</strong> ${node.tooltipContent?.sheet || 'N/A'}<br>
+      <strong>Cell:</strong> ${node.tooltipContent?.cell || 'N/A'}<br>
+      <strong>Formula:</strong> ${node.tooltipContent?.formula || 'N/A'}<br>
+      <strong>Value:</strong> ${node.tooltipContent?.value || 'N/A'}
+    `;
+    adjustTooltipPosition(tooltip, params.event.pageX + 10, params.event.pageY + 10);
+    tooltip.style.display = 'block';
+  });
+
+  // Hide tooltip on blur
+  network.on('blurNode', () => {
+    const tooltip = document.getElementById('tooltip');
+    tooltip.style.display = 'none';
+  });
+
+  // Fit the network view
+  network.fit();
+
+  // Zoom in and out functionality
+  window.zoomIn = () => network.moveTo({ scale: network.getScale() + 0.2 });
+  window.zoomOut = () => network.moveTo({ scale: network.getScale() - 0.2 });
+}
+/**************************************************
+* Generates a unique file name for downloads based on sheet/cell.
+**************************************************/
+    function getFileName(extension, callback) {
+      google.script.run
+        .withSuccessHandler((sheetName) => {
+          google.script.run
+            .withSuccessHandler((cellName) => {
+              const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+              const fileName = `Dependency-graph_${sheetName}_${cellName}_${timestamp}.${extension}`;
+              callback(fileName);
+            })
+            .getActiveCellName();
+        })
+        .getActiveSheetName();
+    }
+/**************************************************
+* Downloads the graph as a PNG image.
+**************************************************/
+    function downloadAsImage() {
+      html2canvas(document.querySelector('#network')).then((canvas) => {
+        getFileName('png', (fileName) => {
+          const link = document.createElement('a');
+          link.download = fileName;
+          link.href = canvas.toDataURL();
+          link.click();
+        });
+      });
+    }
+
+/**************************************************
+* Downloads the graph as a PDF.
+**************************************************/
+    function downloadAsPDF() {
+      html2canvas(document.querySelector('#network')).then((canvas) => {
+        getFileName('pdf', (fileName) => {
+          const pdf = new jspdf.jsPDF();
+          pdf.addImage(canvas.toDataURL(), 'PNG', 10, 10, 190, 160);
+          pdf.save(fileName);
+        });
+      });
+    }
+
+/**************************************************
+ * Makes a tooltip draggable (robust).
+ * - Uses Pointer Events (mouse/touch/pen)
+ * - Positions relative to a container (default: document.body)
+ * - Attaches global move/up listeners only during drag
+ * - Cleans up safely (including mid-drag removal)
+ * - Returns a cleanup() you MUST call when removing the tooltip node
+ **************************************************/
+function makeTooltipDraggable(tooltip, options = {}) {
+  const container = options.container || document.body;
+  const clampToContainer = options.clampToContainer !== false; // default true
+
+  let dragging = false;
+  let pointerId = null;
+  let offsetX = 0;
+  let offsetY = 0;
+  let rafPending = false;
+  let lastClientX = 0;
+  let lastClientY = 0;
+
+  // Ensure tooltip can be positioned
+  if (!tooltip.style.position) tooltip.style.position = 'absolute';
+  tooltip.style.touchAction = 'none'; // critical for touch/pointer dragging
+  tooltip.style.zIndex = '10000'; // Add this to be safe
+
+  const inDom = () => tooltip.isConnected && container.isConnected;
+
+  const setPos = (clientX, clientY) => {
+    if (!inDom()) return;
+
+    const cRect = container.getBoundingClientRect();
+    let left = clientX - cRect.left - offsetX;
+    let top = clientY - cRect.top - offsetY;
+
+    if (clampToContainer) {
+      const tRect = tooltip.getBoundingClientRect();
+      const width = tRect.width;
+      const height = tRect.height;
+
+      const maxLeft = Math.max(0, cRect.width - width);
+      const maxTop = Math.max(0, cRect.height - height);
+
+      left = Math.min(Math.max(0, left), maxLeft);
+      top = Math.min(Math.max(0, top), maxTop);
+    }
+
+    tooltip.style.left = `${left}px`;
+    tooltip.style.top = `${top}px`;
+  };
+
+  const onPointerMove = (e) => {
+    if (!dragging || e.pointerId !== pointerId) return;
+    if (!inDom()) return stopDrag();
+
+    lastClientX = e.clientX;
+    lastClientY = e.clientY;
+
+    // Throttle DOM writes
+    if (rafPending) return;
+    rafPending = true;
+    requestAnimationFrame(() => {
+      rafPending = false;
+      setPos(lastClientX, lastClientY);
+    });
+  };
+
+  const stopDrag = () => {
+    if (!dragging) return;
+    dragging = false;
+
+    tooltip.style.cursor = 'grab';
+
+    window.removeEventListener('pointermove', onPointerMove, true);
+    window.removeEventListener('pointerup', onPointerUp, true);
+    window.removeEventListener('pointercancel', onPointerUp, true);
+
+    try {
+      if (pointerId !== null) tooltip.releasePointerCapture(pointerId);
+    } catch (_) {}
+
+    pointerId = null;
+  };
+
+  const onPointerUp = (e) => {
+    if (e.pointerId !== pointerId) return;
+    stopDrag();
+  };
+
+  const onPointerDown = (e) => {
+    // Only primary button for mouse
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+
+    if (!inDom()) return;
+
+    dragging = true;
+    pointerId = e.pointerId;
+
+    const cRect = container.getBoundingClientRect();
+    const tRect = tooltip.getBoundingClientRect();
+
+    // Offset from pointer to tooltip top-left, in container coordinates
+    offsetX = e.clientX - tRect.left;
+    offsetY = e.clientY - tRect.top;
+
+    tooltip.style.cursor = 'grabbing';
+
+    // Capture pointer so we still get events even if pointer leaves tooltip
+    try {
+      tooltip.setPointerCapture(pointerId);
+    } catch (_) {}
+
+    window.addEventListener('pointermove', onPointerMove, true);
+    window.addEventListener('pointerup', onPointerUp, true);
+    window.addEventListener('pointercancel', onPointerUp, true);
+
+    // Prevent text selection and native drag
+    e.preventDefault();
+  };
+
+  tooltip.style.cursor = 'grab';
+  tooltip.addEventListener('pointerdown', onPointerDown);
+
+  // Return explicit cleanup for when tooltip is removed
+  return function cleanup() {
+    stopDrag();
+    tooltip.removeEventListener('pointerdown', onPointerDown);
+  };
+}
+/**************************************************
+ * Fetch and render dependency graph data.
+ **************************************************/
+    google.script.run.withSuccessHandler(drawDependencyGraph).getDependencies();
+  </script>
+</body>
+</html>

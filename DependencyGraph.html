@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Dependency Graph</title>
+  <script src="https://cdn.jsdelivr.net/npm/hyperformula/dist/hyperformula.full.min.js"></script>
+  <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+  <style>
+    #network {
+      width: 100%;
+      height: 500px;
+      border: 1px solid lightgray;
+    }
+  </style>
+</head>
+<body>
+  <h1>Dependency Graph</h1>
+  <div id="network"></div>
+
+  <script>
+  // Fetch traced precedent data from backend Apps Script
+  google.script.run
+    .withSuccessHandler(drawDependencyGraph)
+    .withFailureHandler((err) => {
+      const container = document.getElementById('network');
+      container.innerHTML = `<p style="color: red;">Error loading dependency graph: ${JSON.stringify(err)}</p>`;
+    })
+    .getErrorTracerData();
+
+  // Simple renderer for precedents using Vis.js
+  function drawDependencyGraph(data) {
+    const nodes = [];
+    const edges = [];
+
+    // Add the selected cell node
+    nodes.push({ id: data.selectedRef, label: data.selectedRef });
+
+    // Add precedent nodes and edges
+    if (Array.isArray(data.precedents)) {
+      data.precedents.forEach((precedent) => {
+        nodes.push({ id: precedent, label: precedent });
+        edges.push({ from: precedent, to: data.selectedRef });
+      });
+    }
+
+    // Render with Vis.js
+    const container = document.getElementById('network');
+    const graphData = { nodes: new vis.DataSet(nodes), edges: new vis.DataSet(edges) };
+    const options = {
+      layout: { hierarchical: { enabled: true, direction: 'LR' } },
+      physics: { enabled: false },
+      interaction: { hover: true }
+    };
+    new vis.Network(container, graphData, options);
+  }
+</script>
+</body>
+</html>
