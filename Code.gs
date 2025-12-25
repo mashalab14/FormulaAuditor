@@ -31,6 +31,7 @@ function onOpen() {
     .addItem('🎨 Format Formula Cells', 'showFormatSidebar')
     .addItem('👀 Watch Window', 'showTraceDependents')
     .addItem('👀 Watch Window (M1)', 'showWatchWindowM1')
+    .addItem('👀 Watch Window (M2)', 'showWatchWindowM2')
     
     .addToUi();
 }
@@ -111,5 +112,87 @@ function showWatchWindowM1() {
 function testFetchA1() {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
   return sheet.getRange(1, 1).getDisplayValue();
+}
+
+// --- MILESTONE 2: MANUAL WATCHER LOGIC ---
+
+function showWatchWindowM2() {
+  const html = HtmlService.createHtmlOutputFromFile('WatchWindow_M2')
+    .setTitle('Watch Window (M2)')
+    .setWidth(300); // Note: sidebar width may not be respected; keep as-is.
+  SpreadsheetApp.getUi().showSidebar(html);
+}
+
+/**
+ * Adds the active cell (active sheet + active cell) to the user's private watch list.
+ * Stores sheetId + row + col to survive renames and inserts.
+ */
+function addActiveCellToWatchM2() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getActiveSheet();
+  const cell = sheet.getActiveCell();
+
+  const newWatch = {
+    id: Utilities.getUuid(),
+    sheetId: sheet.getSheetId(),
+    row: cell.getRow(),
+    col: cell.getColumn(),
+    createdAt: Date.now()
+  };
+
+  const userProps = PropertiesService.getUserProperties();
+  const currentList = JSON.parse(userProps.getProperty('FA_WATCHES') || '[]');
+  currentList.push(newWatch);
+  userProps.setProperty('FA_WATCHES', JSON.stringify(currentList));
+}
+
+/**
+ * Batch reads all watched cells and returns a normalized list including live display values.
+ * Returns items shaped for the UI:
+ * - ok: { id, sheetId, row, col, sheetName, cellRef, value, status: 'OK' }
+ * - missing sheet: { id, sheetId, row, col, status: 'SHEET_MISSING', value: 'Error' }
+ */
+function getWatchListM2() {
+  const userProps = PropertiesService.getUserProperties();
+  const savedList = JSON.parse(userProps.getProperty('FA_WATCHES') || '[]');
+  if (!Array.isArray(savedList) || savedList.length === 0) return [];
+
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+
+  return savedList.map(item => {
+    const sheet = ss.getSheetById(item.sheetId);
+
+    if (!sheet) {
+      return {
+        id: item.id,
+        sheetId: item.sheetId,
+        row: item.row,
+        col: item.col,
+        status: 'SHEET_MISSING',
+        value: 'Error'
+      };
+    }
+
+    const range = sheet.getRange(item.row, item.col);
+
+    return {
+      id: item.id,
+      sheetId: item.sheetId,
+      row: item.row,
+      col: item.col,
+      sheetName: sheet.getName(),
+      cellRef: range.getA1Notation(),
+      value: range.getDisplayValue(),
+      status: 'OK'
+    };
+  });
+}
+
+/** Removes a specific watch item by ID from the user's private watch list. */
+function removeWatchItemM2(idToRemove) {
+  const userProps = PropertiesService.getUserProperties();
+  const list = JSON.parse(userProps.getProperty('FA_WATCHES') || '[]');
+  const next = (Array.isArray(list) ? list : []).filter(item => item.id !== idToRemove);
+  userProps.setProperty('FA_WATCHES', JSON.stringify(next));
 }
 
