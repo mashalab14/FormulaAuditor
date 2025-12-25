@@ -29,7 +29,7 @@ function onOpen() {
     
     // 2. Sidebar Utilities
     .addItem('🎨 Format Formula Cells', 'showFormatSidebar')
-    .addItem('👀 Watch Window', 'showWatchWindowM3')
+    .addItem('👀 Watch Window', 'showWatchWindow')
     
     .addToUi();
 }
@@ -100,8 +100,8 @@ function applyFormatting(styles) {
 
 // --- MILESTONE 3: PROFESSIONAL WATCH WINDOW ---
 
-function showWatchWindowM3() {
-  const html = HtmlService.createHtmlOutputFromFile('WatchWindow_M3')
+function showWatchWindow() {
+  const html = HtmlService.createHtmlOutputFromFile('WatchWindow')
     .setTitle('Formula Auditor')
     .setWidth(320); // Note: sidebar width may not be respected; keep as-is.
   SpreadsheetApp.getUi().showSidebar(html);
@@ -112,7 +112,7 @@ function showWatchWindowM3() {
  * Dedupe rule: same sheetId + row + col should not be added twice.
  * Returns: { added: boolean, reason?: string }
  */
-function addActiveCellToWatchM3() {
+function addActiveCellToWatch() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const sheet = ss.getActiveSheet();
   const cell = sheet.getActiveCell();
@@ -156,7 +156,7 @@ function addActiveCellToWatchM3() {
  *   >
  * }
  */
-function getWatchListM3() {
+function getWatchList() {
   const userProps = PropertiesService.getUserProperties();
   const saved = JSON.parse(userProps.getProperty('FA_WATCHES') || '[]');
   const arr = Array.isArray(saved) ? saved : [];
@@ -204,7 +204,7 @@ function getWatchListM3() {
 }
 
 /** Removes a specific watch item by ID from FA_WATCHES. Returns { removed: boolean }. */
-function removeWatchItemM3(idToRemove) {
+function removeWatchItem(idToRemove) {
   const userProps = PropertiesService.getUserProperties();
   const saved = JSON.parse(userProps.getProperty('FA_WATCHES') || '[]');
   const arr = Array.isArray(saved) ? saved : [];
@@ -216,7 +216,7 @@ function removeWatchItemM3(idToRemove) {
 }
 
 /** Removes all watches whose sheet is missing. Returns { removedCount: number }. */
-function removeMissingWatchesM3() {
+function removeMissingWatches() {
   const userProps = PropertiesService.getUserProperties();
   const saved = JSON.parse(userProps.getProperty('FA_WATCHES') || '[]');
   const arr = Array.isArray(saved) ? saved : [];
@@ -242,7 +242,7 @@ function removeMissingWatchesM3() {
  * Must survive sheet rename.
  * Returns { ok: boolean, reason?: string }.
  */
-function jumpToWatchCellM3(sheetId, row, col) {
+function jumpToWatchCell(sheetId, row, col) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const sheet = ss.getSheetById(sheetId);
   if (!sheet) return { ok: false, reason: 'SHEET_MISSING' };
