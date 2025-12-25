@@ -42,13 +42,29 @@ function showTraceErrors() {
   SpreadsheetApp.getUi().alert("Coming Soon: Trace Errors Graph");
 }
 /**
- * Shows the Format Tool sidebar
+ * Shows the unified Formula Auditor sidebar with specified initial tab
+ */
+function showFormulaAuditorSidebar(initialTab) {
+  const template = HtmlService.createTemplateFromFile('FormulaAuditorSidebar');
+  template.initialTab = initialTab || 'format';
+  const html = template.evaluate()
+    .setTitle('Formula Auditor')
+    .setWidth(320);
+  SpreadsheetApp.getUi().showSidebar(html);
+}
+
+/**
+ * Shows the Format Tool sidebar (legacy entry point)
  */
 function showFormatSidebar() {
-  const html = HtmlService.createHtmlOutputFromFile('formatFormulaCells')
-    .setTitle('Format Tool')
-    .setWidth(300);
-  SpreadsheetApp.getUi().showSidebar(html);
+  showFormulaAuditorSidebar('format');
+}
+
+/**
+ * Shows the Watch Window sidebar (legacy entry point)
+ */
+function showWatchWindow() {
+  showFormulaAuditorSidebar('watch');
 }
 
 /*****
@@ -98,14 +114,7 @@ function applyFormatting(styles) {
   return `✅ Formatting applied to ${formattedCount} cells with formulas in Sheet:"${context.sheetName}"`;
 }
 
-// --- MILESTONE 3: PROFESSIONAL WATCH WINDOW ---
-
-function showWatchWindow() {
-  const html = HtmlService.createHtmlOutputFromFile('WatchWindow')
-    .setTitle('Formula Auditor')
-    .setWidth(320); // Note: sidebar width may not be respected; keep as-is.
-  SpreadsheetApp.getUi().showSidebar(html);
-}
+// --- WATCH WINDOW ---
 
 /**
  * Adds the active cell to FA_WATCHES with dedupe.
