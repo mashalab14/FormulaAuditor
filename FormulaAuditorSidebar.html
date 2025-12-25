@@ -1,0 +1,960 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  
+  <style>
+    /* Root scoping */
+    #fa-root {
+      --bg: #ffffff;
+      --text: #202124;
+      --muted: #5f6368;
+      --muted-light: #80868b;
+      --divider: #e0e0e0;
+      --hover: #f1f3f4;
+      --primary: #1a73e8;
+      --danger: #d93025;
+      --banner-info-bg: #f1f3f4;
+      --banner-error-bg: #fce8e6;
+      --tab-active: #1a73e8;
+      --tab-inactive: #5f6368;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: Roboto, Arial, sans-serif;
+      font-size: 13px;
+      color: var(--text);
+      background: var(--bg);
+    }
+
+    #fa-root {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+
+    /* Header */
+    .fa-header {
+      padding: 16px 12px 0 12px;
+      border-bottom: 1px solid var(--divider);
+      background: var(--bg);
+    }
+
+    .fa-title {
+      font-size: 16px;
+      font-weight: 500;
+      color: var(--text);
+      margin-bottom: 12px;
+    }
+
+    /* Tabs */
+    .fa-tabs {
+      display: flex;
+      gap: 0;
+    }
+
+    .fa-tab {
+      flex: 1;
+      padding: 12px 8px;
+      border: none;
+      background: none;
+      color: var(--tab-inactive);
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: all 0.2s ease;
+    }
+
+    .fa-tab:hover {
+      background: var(--hover);
+    }
+
+    .fa-tab[aria-selected="true"] {
+      color: var(--tab-active);
+      border-bottom-color: var(--tab-active);
+    }
+
+    /* Panels */
+    .fa-content {
+      flex: 1;
+      overflow-y: auto;
+      overflow-x: hidden;
+    }
+
+    .fa-panel {
+      display: none;
+      height: 100%;
+    }
+
+    .fa-panel.active {
+      display: block;
+    }
+
+    /* Format Panel Styles */
+    #panel-format {
+      padding: 10px;
+    }
+
+    .format-container {
+      border-radius: 4px;
+      border: 1px solid #DADCE0;
+      overflow: hidden;
+    }
+
+    .format-header {
+      font-size: 14px;
+      font-weight: lighter;
+      color: #5F6368;
+      padding: 6px;
+      background-color: #E8F0FE;
+      transition: background-color 0.3s ease, color 0.3s ease;
+    }
+
+    .toolbar {
+      display: flex;
+      align-items: center;
+      background-color: white;
+      padding: 6px;
+    }
+
+    .toolbar button {
+      border: none;
+      background: none;
+      font-size: 16px;
+      padding: 4px 8px;
+      cursor: pointer;
+      color: #3C4043;
+      border-radius: 2px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 36px;
+      height: 36px;
+      transition: background 0.2s ease-in-out;
+      position: relative;
+    }
+
+    .toolbar button:hover {
+      background-color: rgba(200, 200, 200, 0.2);
+    }
+
+    .toolbar button.active {
+      background-color: #D2E3FC;
+    }
+
+    .tooltip {
+      position: absolute;
+      bottom: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: #3C4043;
+      color: white;
+      font-size: 12px;
+      padding: 4px 6px;
+      border-radius: 3px;
+      white-space: nowrap;
+      display: none;
+      z-index: 1000;
+      box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.2);
+    }
+
+    .toolbar button:hover .tooltip,
+    .color-picker-container:hover .tooltip {
+      display: block;
+    }
+
+    .separator {
+      width: 1px;
+      height: 24px;
+      background-color: #B0BEC5;
+      margin: 0 8px;
+    }
+
+    .color-container {
+      display: flex;
+      align-items: center;
+    }
+
+    .color-picker-container {
+      position: relative;
+      display: flex;
+      align-items: center;
+      cursor: pointer;
+      border: 1px solid #DADCE0;
+      border-radius: 3px;
+      background-color: white;
+      margin-left: 5px;
+      width: 34px;
+      height: 28px;
+      justify-content: center;
+      padding: 4px;
+      transition: background 0.2s ease-in-out;
+    }
+
+    .color-picker-container:hover {
+      background-color: rgba(200, 200, 200, 0.2);
+    }
+
+    .color-icon {
+      font-size: 18px;
+      color: #3C4043;
+      cursor: pointer;
+    }
+
+    .hidden-picker {
+      position: absolute;
+      opacity: 0;
+      width: 34px;
+      height: 28px;
+      cursor: pointer;
+    }
+
+    .action-buttons {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 10px;
+    }
+
+    .apply-btn, .cancel-btn {
+      flex: 1;
+      border: none;
+      padding: 8px;
+      font-size: 14px;
+      cursor: pointer;
+      color: white;
+      border-radius: 5px;
+      text-align: center;
+    }
+
+    .disabled {
+      pointer-events: none;
+      filter: grayscale(70%);
+    }
+
+    .disabled .tooltip {
+      display: none !important;
+    }
+
+    .apply-btn {
+      background-color: #188038;
+      margin-right: 5px;
+    }
+
+    .cancel-btn {
+      background-color: #D93025;
+    }
+
+    .cancel-btn:disabled {
+      background-color: #d6d6d6 !important;
+      color: #a1a1a1 !important;
+      cursor: not-allowed !important;
+      opacity: 0.6;
+    }
+
+    #fmt-status {
+      margin-top: 10px;
+      font-size: 14px;
+    }
+
+    .spinner-container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 50px;
+    }
+
+    #fmt-spinner {
+      display: none;
+    }
+
+    /* Watch Panel Styles */
+    #panel-watch {
+      padding: 12px 12px 16px 12px;
+    }
+
+    .ww-header {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      padding: 4px 0 10px 0;
+      border-bottom: 1px solid var(--divider);
+    }
+
+    .ww-title {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text);
+    }
+
+    .ww-subtitle {
+      font-size: 11px;
+      color: var(--muted-light);
+      display: none;
+    }
+
+    .ww-toolbar {
+      display: flex;
+      gap: 8px;
+      padding: 12px 0 10px 0;
+      align-items: center;
+    }
+
+    .btn {
+      height: 32px;
+      border-radius: 4px;
+      padding: 0 12px;
+      font-size: 13px;
+      font-weight: 500;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      user-select: none;
+      border: 1px solid var(--divider);
+      background: #fff;
+      color: var(--text);
+    }
+
+    .btn:hover { background: var(--hover); }
+    .btn:disabled { opacity: 0.55; cursor: default; }
+
+    .btn.primary {
+      background: var(--primary);
+      border: 1px solid var(--primary);
+      color: #fff;
+    }
+    .btn.primary:hover { background: #1765cc; }
+
+    .btn .material-icons {
+      font-size: 18px;
+      line-height: 18px;
+    }
+
+    .banner {
+      display: none;
+      margin: 0 0 8px 0;
+      padding: 8px 12px;
+      border-radius: 4px;
+      background: var(--banner-info-bg);
+      color: var(--text);
+      font-size: 12px;
+      line-height: 16px;
+    }
+
+    .banner.error {
+      background: var(--banner-error-bg);
+      color: var(--danger);
+    }
+
+    .ww-list {
+      border-top: 1px solid var(--divider);
+    }
+
+    .ww-row {
+      display: grid;
+      grid-template-columns: 1fr auto 32px;
+      gap: 8px;
+      align-items: center;
+      min-height: 44px;
+      padding: 8px;
+      border-bottom: 1px solid var(--divider);
+    }
+
+    .ww-row:hover { background: var(--hover); }
+
+    .ww-loc {
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .ww-label {
+      font-size: 13px;
+      color: var(--text);
+      line-height: 18px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      cursor: pointer;
+    }
+
+    .ww-label:hover {
+      color: var(--primary);
+    }
+
+    .ww-meta {
+      font-size: 11px;
+      color: var(--muted-light);
+      line-height: 14px;
+    }
+
+    .ww-value {
+      font-weight: 500;
+      text-align: right;
+      white-space: nowrap;
+      max-width: 100px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      font-size: 13px;
+    }
+
+    .ww-value.error { color: var(--danger); }
+
+    .iconbtn {
+      width: 28px;
+      height: 28px;
+      border-radius: 14px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      color: var(--muted-light);
+      opacity: 0;
+      transition: opacity 0.15s ease;
+    }
+
+    .ww-row:hover .iconbtn { opacity: 1; }
+    .iconbtn:focus { opacity: 1; outline: none; }
+    
+    .iconbtn:hover { 
+      background: #fce8e6; 
+      color: var(--danger); 
+    }
+
+    .iconbtn .material-icons { font-size: 18px; }
+
+    .ww-empty {
+      padding: 32px 16px;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .ww-empty .material-icons {
+      font-size: 24px;
+      color: var(--muted-light);
+    }
+
+    .ww-empty-text {
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 18px;
+    }
+
+    .ww-empty-hint {
+      font-size: 12px;
+      color: var(--muted-light);
+      line-height: 16px;
+    }
+
+    .footer-actions {
+      display: none;
+      padding: 12px 8px 0 8px;
+      border-top: 1px solid var(--divider);
+      margin-top: 8px;
+    }
+
+    .footer-actions.visible {
+      display: block;
+    }
+
+    .linkbtn {
+      border: none;
+      background: transparent;
+      color: var(--primary);
+      cursor: pointer;
+      font-size: 13px;
+      padding: 8px 0;
+      font-weight: 500;
+    }
+    .linkbtn:hover { text-decoration: underline; }
+    .linkbtn:disabled { opacity: 0.55; cursor: default; }
+  </style>
+</head>
+<body>
+  <div id="fa-root">
+    <!-- Header -->
+    <div class="fa-header">
+      <div class="fa-title">Formula Auditor</div>
+      <div class="fa-tabs" role="tablist">
+        <button class="fa-tab" role="tab" aria-selected="false" aria-controls="panel-format" id="tab-format" onclick="switchTab('format')">
+          Format
+        </button>
+        <button class="fa-tab" role="tab" aria-selected="false" aria-controls="panel-watch" id="tab-watch" onclick="switchTab('watch')">
+          Watch
+        </button>
+      </div>
+    </div>
+
+    <!-- Content Area -->
+    <div class="fa-content">
+      <!-- Format Panel -->
+      <div id="panel-format" class="fa-panel" role="tabpanel" aria-labelledby="tab-format">
+        <div class="format-container">
+          <div class="format-header">Custom</div>
+          <div class="toolbar">
+            <button id="fmt-boldBtn" onclick="fmtToggleStyle('bold')">
+              <span class="material-icons">format_bold</span>
+              <span class="tooltip">Bold</span>
+            </button>
+
+            <button id="fmt-italicBtn" onclick="fmtToggleStyle('italic')">
+              <span class="material-icons">format_italic</span>
+              <span class="tooltip">Italic</span>
+            </button>
+
+            <button id="fmt-underlineBtn" onclick="fmtToggleStyle('underline')">
+              <span class="material-icons">format_underlined</span>
+              <span class="tooltip">Underline</span>
+            </button>
+
+            <button id="fmt-strikethroughBtn" onclick="fmtToggleStyle('strikethrough')">
+              <span class="material-icons">format_strikethrough</span>
+              <span class="tooltip">Strikethrough</span>
+            </button>
+
+            <div class="separator"></div>
+
+            <div class="color-container">
+              <div class="color-picker-container">
+                <span class="material-icons" id="fmt-textColorIcon">format_color_text</span>
+                <div class="tooltip">Font Color</div>
+                <input type="color" id="fmt-textColorPicker" class="hidden-picker" onchange="fmtSetColor('textColor', this.value); fmtMarkColorChanged('textColor');">
+              </div>
+
+              <div class="color-picker-container">
+                <span class="material-icons" id="fmt-bgColorIcon">format_color_fill</span>
+                <div class="tooltip">Background Color</div>
+                <input type="color" id="fmt-bgColorPicker" class="hidden-picker" onchange="fmtSetColor('bgColor', this.value); fmtMarkColorChanged('bgColor');">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="action-buttons">
+          <button class="apply-btn" onclick="fmtApplyStyles()">Apply</button>
+          <button class="cancel-btn" id="fmt-cancelBtn" onclick="fmtCancelOperation()" disabled>Cancel</button>
+        </div>
+
+        <div class="spinner-container">
+          <img id="fmt-spinner" src="https://www.google.com/images/spin-32.gif" alt="Processing...">
+        </div>
+
+        <div id="fmt-status"></div>
+      </div>
+
+      <!-- Watch Panel -->
+      <div id="panel-watch" class="fa-panel" role="tabpanel" aria-labelledby="tab-watch">
+        <div class="ww-header">
+          <div class="ww-title">Watch window</div>
+          <div class="ww-subtitle" id="ww-lastRefreshed">Last refreshed: -</div>
+        </div>
+
+        <div id="ww-banner" class="banner"></div>
+
+        <div class="ww-toolbar">
+          <button class="btn primary" id="ww-btnAdd" onclick="wwAddWatch()">
+            <span class="material-icons">add</span>
+            Add watch
+          </button>
+
+          <button class="btn" id="ww-btnRefresh" onclick="wwRefreshList()">
+            <span class="material-icons">refresh</span>
+            Refresh
+          </button>
+        </div>
+
+        <div id="ww-list" class="ww-list"></div>
+
+        <div class="footer-actions" id="ww-footer">
+          <button class="linkbtn" id="ww-btnRemoveMissing" onclick="wwRemoveMissing()">
+            Remove broken watches
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ========== TAB SWITCHING ==========
+    let currentTab = '<?= initialTab ?>' || 'format';
+
+    function switchTab(tabName) {
+      // Update tabs
+      document.querySelectorAll('.fa-tab').forEach(tab => {
+        tab.setAttribute('aria-selected', 'false');
+      });
+      document.getElementById('tab-' + tabName).setAttribute('aria-selected', 'true');
+
+      // Update panels
+      document.querySelectorAll('.fa-panel').forEach(panel => {
+        panel.classList.remove('active');
+      });
+      document.getElementById('panel-' + tabName).classList.add('active');
+
+      currentTab = tabName;
+
+      // Initialize Watch panel on first view
+      if (tabName === 'watch' && !window.watchInitialized) {
+        window.watchInitialized = true;
+        wwRefreshList();
+      }
+    }
+
+    // Initialize on load
+    window.addEventListener('DOMContentLoaded', () => {
+      switchTab(currentTab);
+    });
+
+    // ========== FORMAT TAB LOGIC ==========
+    let fmtColorChanged = {
+      textColor: false,
+      bgColor: false
+    };
+
+    function fmtToggleStyle(style) {
+      const button = document.getElementById('fmt-' + style + 'Btn');
+      const header = document.querySelector('.format-header');
+      button.classList.toggle('active');
+      if (!header) return;
+
+      if (style === 'bold') {
+        header.style.fontWeight = button.classList.contains('active') ? 'bold' : 'normal';
+      } else if (style === 'italic') {
+        header.style.fontStyle = button.classList.contains('active') ? 'italic' : 'normal';
+      } else if (style === 'underline') {
+        header.style.textDecoration = button.classList.contains('active') ? 'underline' : 'none';
+      } else if (style === 'strikethrough') {
+        header.style.textDecoration = button.classList.contains('active') ? 'line-through' : 'none';
+      }
+    }
+
+    function fmtSetColor(type, value) {
+      const header = document.querySelector('.format-header');
+      if (type === 'textColor') {
+        header.style.color = value;
+        document.getElementById('fmt-textColorIcon').style.color = value;
+      } else if (type === 'bgColor') {
+        header.style.backgroundColor = value;
+        document.getElementById('fmt-bgColorIcon').style.color = value;
+      }
+    }
+
+    function fmtMarkColorChanged(type) {
+      fmtColorChanged[type] = true;
+    }
+
+    function fmtApplyStyles() {
+      document.getElementById('fmt-spinner').style.display = 'block';
+      document.getElementById('fmt-status').innerText = '';
+      const textColorPicker = document.getElementById('fmt-textColorPicker');
+      const bgColorPicker = document.getElementById('fmt-bgColorPicker');
+
+      fmtDisableFormattingButtons(true);
+
+      const cancelBtn = document.getElementById('fmt-cancelBtn');
+      cancelBtn.disabled = false;
+      cancelBtn.classList.remove('cancel-btn:disabled');
+
+      let styles = {
+        bold: document.getElementById('fmt-boldBtn').classList.contains('active'),
+        italic: document.getElementById('fmt-italicBtn').classList.contains('active'),
+        underline: document.getElementById('fmt-underlineBtn').classList.contains('active'),
+        strikethrough: document.getElementById('fmt-strikethroughBtn').classList.contains('active'),
+        textColor: fmtColorChanged.textColor ? textColorPicker.value : '',
+        bgColor: fmtColorChanged.bgColor ? bgColorPicker.value : ''
+      };
+
+      google.script.run
+        .withSuccessHandler(response => {
+          document.getElementById('fmt-spinner').style.display = 'none';
+          document.getElementById('fmt-status').innerText = response;
+          
+          fmtColorChanged.textColor = false;
+          fmtColorChanged.bgColor = false;
+
+          fmtDisableFormattingButtons(false);
+
+          cancelBtn.disabled = true;
+          cancelBtn.classList.add('cancel-btn:disabled');
+
+          setTimeout(() => {
+            document.getElementById('fmt-status').innerText = '';
+          }, 3000);
+        })
+        .applyFormatting(styles);
+    }
+
+    function fmtDisableFormattingButtons(disable) {
+      document.querySelectorAll('#panel-format .toolbar button, #panel-format .apply-btn, #panel-format .color-picker-container').forEach(element => {
+        element.disabled = disable;
+        element.style.pointerEvents = disable ? 'none' : 'auto';
+        if (disable) {
+          element.classList.add('disabled');
+        } else {
+          element.classList.remove('disabled');
+        }
+      });
+    }
+
+    function fmtCancelOperation() {
+      google.script.run
+        .withSuccessHandler(response => {
+          document.getElementById('fmt-status').innerText = response;
+
+          const cancelBtn = document.getElementById('fmt-cancelBtn');
+          cancelBtn.disabled = true;
+          cancelBtn.classList.add('cancel-btn:disabled');
+
+          fmtDisableFormattingButtons(false);
+
+          setTimeout(() => {
+            document.getElementById('fmt-status').innerText = '';
+          }, 3000);
+        })
+        .cancelFormatting();
+    }
+
+    // ========== WATCH TAB LOGIC ==========
+    let wwBannerTimer = null;
+
+    function wwToErrorMessage(err) {
+      try {
+        if (err && typeof err === 'object') return err.message || JSON.stringify(err, null, 2);
+        return String(err);
+      } catch (e) {
+        return 'Unknown error (failed to stringify)';
+      }
+    }
+
+    function wwEscapeHtml(text) {
+      if (text === null || text === undefined) return '';
+      return String(text)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    function wwSetBusy(isBusy) {
+      document.getElementById('ww-btnAdd').disabled = isBusy;
+      document.getElementById('ww-btnRefresh').disabled = isBusy;
+    }
+
+    function wwShowBanner(message, isError) {
+      wwClearBanner();
+      const b = document.getElementById('ww-banner');
+      b.innerText = message;
+      if (isError) {
+        b.classList.add('error');
+      }
+      b.style.display = 'block';
+      
+      wwBannerTimer = setTimeout(() => {
+        wwClearBanner();
+      }, 5000);
+    }
+
+    function wwClearBanner() {
+      if (wwBannerTimer) {
+        clearTimeout(wwBannerTimer);
+        wwBannerTimer = null;
+      }
+      const b = document.getElementById('ww-banner');
+      b.style.display = 'none';
+      b.innerText = '';
+      b.classList.remove('error');
+    }
+
+    function wwFormatTime(ts) {
+      try {
+        const d = new Date(ts);
+        const hh = String(d.getHours()).padStart(2, '0');
+        const mm = String(d.getMinutes()).padStart(2, '0');
+        const ss = String(d.getSeconds()).padStart(2, '0');
+        return hh + ':' + mm + ':' + ss;
+      } catch (e) {
+        return '-';
+      }
+    }
+
+    function wwUpdateLastRefreshed(serverNow) {
+      const subtitle = document.getElementById('ww-lastRefreshed');
+      if (serverNow && typeof serverNow === 'number' && serverNow > 0) {
+        subtitle.innerText = 'Last refreshed: ' + wwFormatTime(serverNow);
+        subtitle.style.display = 'inline';
+      } else {
+        subtitle.innerText = '';
+        subtitle.style.display = 'none';
+      }
+    }
+
+    function wwUpdateFooterVisibility(hasMissing) {
+      const footer = document.getElementById('ww-footer');
+      if (hasMissing) {
+        footer.classList.add('visible');
+      } else {
+        footer.classList.remove('visible');
+      }
+    }
+
+    function wwRender(payload) {
+      const list = document.getElementById('ww-list');
+
+      const items = payload && payload.items ? payload.items : [];
+      const serverNow = payload && payload.serverNow ? payload.serverNow : null;
+
+      if (serverNow) wwUpdateLastRefreshed(serverNow);
+
+      if (!items || items.length === 0) {
+        wwUpdateFooterVisibility(false);
+        list.innerHTML = `
+          <div class="ww-empty">
+            <span class="material-icons">visibility</span>
+            <div class="ww-empty-text">No watches yet</div>
+            <div class="ww-empty-hint">Select a cell and click Add watch</div>
+          </div>
+        `;
+        return;
+      }
+
+      const hasMissing = items.some(x => x.status === 'SHEET_MISSING');
+      wwUpdateFooterVisibility(hasMissing);
+
+      let html = '';
+      items.forEach(item => {
+        if (item.status === 'SHEET_MISSING') {
+          html += `
+            <div class="ww-row" id="ww-row-${wwEscapeHtml(item.id)}">
+              <div class="ww-loc">
+                <div class="ww-label">Missing sheet (id: ${wwEscapeHtml(item.sheetId)})</div>
+                <div class="ww-meta">Sheet deleted or unavailable</div>
+              </div>
+              <div class="ww-value error">Error</div>
+              <div class="iconbtn" tabindex="0" title="Remove" onclick="wwRemoveItem('${wwEscapeHtml(item.id)}')">
+                <span class="material-icons">close</span>
+              </div>
+            </div>
+          `;
+        } else {
+          const valueClass = item.isErrorValue ? 'ww-value error' : 'ww-value';
+          const labelText = wwEscapeHtml(item.sheetName) + '!' + wwEscapeHtml(item.cellRef);
+          html += `
+            <div class="ww-row" id="ww-row-${wwEscapeHtml(item.id)}">
+              <div class="ww-loc">
+                <div class="ww-label" title="Go to cell" onclick="wwJumpTo(${item.sheetId}, ${item.row}, ${item.col})">${labelText}</div>
+              </div>
+              <div class="${valueClass}">${wwEscapeHtml(item.value)}</div>
+              <div class="iconbtn" tabindex="0" title="Remove" onclick="wwRemoveItem('${wwEscapeHtml(item.id)}')">
+                <span class="material-icons">close</span>
+              </div>
+            </div>
+          `;
+        }
+      });
+
+      list.innerHTML = html;
+    }
+
+    function wwAddWatch() {
+      wwClearBanner();
+      wwSetBusy(true);
+
+      google.script.run
+        .withSuccessHandler(res => {
+          if (res && res.added === false && res.reason === 'DUPLICATE') {
+            wwShowBanner('Already watching that cell.', false);
+            wwSetBusy(false);
+            return;
+          }
+          wwRefreshList();
+        })
+        .withFailureHandler(err => {
+          wwSetBusy(false);
+          wwShowBanner('Error: ' + wwToErrorMessage(err), true);
+        })
+        .addActiveCellToWatch();
+    }
+
+    function wwRefreshList() {
+      wwClearBanner();
+      wwSetBusy(true);
+
+      google.script.run
+        .withSuccessHandler(payload => {
+          wwSetBusy(false);
+          wwRender(payload);
+        })
+        .withFailureHandler(err => {
+          wwSetBusy(false);
+          wwShowBanner('Error: ' + wwToErrorMessage(err), true);
+        })
+        .getWatchList();
+    }
+
+    function wwRemoveItem(id) {
+      wwClearBanner();
+
+      const row = document.getElementById('ww-row-' + id);
+      if (row) row.style.opacity = '0.4';
+
+      wwSetBusy(true);
+      google.script.run
+        .withSuccessHandler(() => wwRefreshList())
+        .withFailureHandler(err => {
+          wwSetBusy(false);
+          if (row) row.style.opacity = '1';
+          wwShowBanner('Error: ' + wwToErrorMessage(err), true);
+        })
+        .removeWatchItem(id);
+    }
+
+    function wwRemoveMissing() {
+      wwClearBanner();
+      wwSetBusy(true);
+
+      google.script.run
+        .withSuccessHandler(res => {
+          wwRefreshList();
+          if (res && typeof res.removedCount === 'number' && res.removedCount > 0) {
+            wwShowBanner('Removed ' + res.removedCount + ' broken watch(es).', false);
+          }
+        })
+        .withFailureHandler(err => {
+          wwSetBusy(false);
+          wwShowBanner('Error: ' + wwToErrorMessage(err), true);
+        })
+        .removeMissingWatches();
+    }
+
+    function wwJumpTo(sheetId, row, col) {
+      wwClearBanner();
+      wwSetBusy(true);
+
+      google.script.run
+        .withSuccessHandler(res => {
+          wwSetBusy(false);
+          if (!res || res.ok !== true) {
+            wwShowBanner('Could not navigate: ' + (res && res.reason ? res.reason : 'UNKNOWN'), true);
+          }
+        })
+        .withFailureHandler(err => {
+          wwSetBusy(false);
+          wwShowBanner('Error: ' + wwToErrorMessage(err), true);
+        })
+        .jumpToWatchCell(sheetId, row, col);
+    }
+  </script>
+</body>
+</html>
