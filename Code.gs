@@ -19,10 +19,28 @@
 function onOpen() {
   const ui = SpreadsheetApp.getUi();
   ui.createMenu('Formula Auditor')
+    // 1. Core Graph Features
+    .addItem('🔍 Trace Precedents', 'showTraceDependents') 
+    .addItem('🔄 Trace Dependents', 'showTraceDependents') // Placeholder
+    .addItem('❌ Trace Errors', 'showTraceErrors')         // Placeholder
+    .addItem('🏷️ Named Range Dependency', 'showTraceDependents')
+    
+    .addSeparator()
+    
+    // 2. Sidebar Utilities
     .addItem('🎨 Format Formula Cells', 'showFormatSidebar')
+    .addItem('👀 Watch Window', 'showTraceDependents')
+    
     .addToUi();
 }
+// --- Placeholders for Future Logic ---
+function showTraceDependents() {
+  SpreadsheetApp.getUi().alert("Coming Soon: Trace Dependents Graph");
+}
 
+function showTraceErrors() {
+  SpreadsheetApp.getUi().alert("Coming Soon: Trace Errors Graph");
+}
 /**
  * Shows the Format Tool sidebar
  */
