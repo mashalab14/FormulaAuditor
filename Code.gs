@@ -302,3 +302,75 @@ function getErrorTracerData() {
     errorPathEdges: traced.errorPathEdges || []
   };
 }
+// F001-Precedence: Client-side logic migrated to server-side
+
+function parseFormula(formula) {
+  try {
+    return extractReferences(formula);
+  } catch (e) {
+    Logger.log("parseFormula error: " + e);
+    return [];
+  }
+}
+
+function extractReferences(formula) {
+  const regex = /(?:'([^']+)'|([A-Za-z0-9_]+))?!?\$?([A-Z]+)\$?([0-9]+)/g;
+  const references = new Set();
+  let match;
+  while ((match = regex.exec(formula)) !== null) {
+    const sheet = match[1] || match[2] || '';
+    const col = match[3];
+    const row = match[4];
+    const ref = sheet ? `${sheet}!${col}${row}` : `${col}${row}`;
+    references.add(ref);
+  }
+  return Array.from(references);
+}
+
+function getDependencies(cell, visited = new Set(), levelMap = {}, edges = [], cellMap = {}, level = 0) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = cell.getSheet();
+  const sheetName = sheet.getName();
+  const ref = `${sheetName}!${cell.getA1Notation()}`;
+  if (visited.has(ref)) return;
+
+  visited.add(ref);
+  levelMap[ref] = level;
+  const formula = cell.getFormula();
+
+  cellMap[ref] = {
+    sheet: sheetName,
+    cell: cell.getA1Notation(),
+    value: cell.getDisplayValue(),
+    formula: formula,
+    type: formula ? 'formulaCell' : 'nonFormulaCell',
+    isErrorValue: typeof cell.getDisplayValue() === 'string' && cell.getDisplayValue().startsWith('#')
+  };
+
+  if (!formula) return;
+
+  const references = parseFormula(formula);
+  references.forEach(refStr => {
+    let range;
+    try {
+      range = ss.getRange(refStr);
+    } catch (e) {
+      Logger.log("Invalid reference: " + refStr);
+      return;
+    }
+
+    const rangeSheet = range.getSheet();
+    const rangeSheetName = rangeSheet.getName();
+    const rangeRef = `${rangeSheetName}!${range.getA1Notation()}`;
+    edges.push({ from: rangeRef, to: ref });
+
+    getDependencies(range, visited, levelMap, edges, cellMap, level + 1);
+  });
+
+  return {
+    precedents: Array.from(visited).filter(x => x !== ref),
+    levelMap,
+    cellMap,
+    edges
+  };
+}
