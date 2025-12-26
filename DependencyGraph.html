@@ -6,11 +6,19 @@
   <script src="https://cdn.jsdelivr.net/npm/hyperformula/dist/hyperformula.full.min.js"></script>
   <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
   <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      overflow: hidden;
+    }
     #network {
-      width: 100%;
-      height: 440px;
+      position: absolute;
+      top: 36px;
+      left: 0;
+      right: 0;
+      bottom: 60px;
       border: 1px solid lightgray;
-      position: relative;
     }
     .tooltip {
       position: absolute;
@@ -74,24 +82,29 @@
     .zoom-buttons {
       position: absolute;
       bottom: 10px;
-      right: 10px;
+      left: 50%;
+      transform: translateX(-50%);
       display: flex;
-      flex-direction: column;
-      gap: 6px;
+      flex-direction: row;
+      gap: 8px;
       z-index: 1100;
     }
     .zoom-button {
-      background: #eee;
-      border: 1px solid #ccc;
-      border-radius: 4px;
+      background: white;
+      border: 1px solid #333;
+      border-radius: 50%;
       width: 32px;
       height: 32px;
       text-align: center;
-      line-height: 32px;
-      font-weight: bold;
-      font-size: 20px;
+      line-height: 30px;
+      font-weight: normal;
+      font-size: 18px;
       cursor: pointer;
       user-select: none;
+      transition: background 0.2s ease;
+    }
+    .zoom-button:hover {
+      background-color: #f4f4f4;
     }
   </style>
 </head>
