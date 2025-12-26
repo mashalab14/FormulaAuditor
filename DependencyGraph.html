@@ -358,7 +358,7 @@
             border: "#555"
           },
           font: { color: "#fff" },
-          shape: "box",
+          shape: "ellipse",
           margin: 10
         });
       });
@@ -406,10 +406,10 @@
         layout: {
           hierarchical: {
             enabled: true,
-            direction: 'RL',
+            direction: 'UD',
             sortMethod: 'directed',
-            nodeSpacing: 200,
-            levelSeparation: 150
+            nodeSpacing: 100,
+            levelSeparation: 100
           }
         },
         physics: {
@@ -422,7 +422,7 @@
           keyboard: false
         },
         nodes: {
-          shape: 'box',
+          shape: 'ellipse',
           font: {
             size: 14,
             color: '#fff'
@@ -437,7 +437,7 @@
             roundness: 0.4
           },
           arrows: {
-            to: { enabled: true, scaleFactor: 0.6 }
+            to: { enabled: true, scaleFactor: 0.8 }
           },
           color: { color: '#888' }
         }
