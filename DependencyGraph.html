@@ -421,6 +421,11 @@
 
       network = new vis.Network(container, dataVis, options);
 
+      // Attach persistent tooltip updater when details are visible
+      if (detailsVisible) {
+        network.on("afterDrawing", updatePersistentTooltipsPosition);
+      }
+
       // Persistent tooltips for "Show Details"
       if (detailsVisible) {
         // Remove existing persistent tooltips
@@ -438,6 +443,7 @@
           tip.style.left = (canvasCoords.x + 10) + "px";
           tip.style.top = (canvasCoords.y + 10) + "px";
           tip.style.display = "block";
+          tip.dataset.ref = ref;
           document.body.appendChild(tip);
           makeTooltipDraggable(tip);
           adjustTooltipPosition(tip);
@@ -515,3 +521,14 @@
   </script>
 </body>
 </html>
+    // Updates persistent tooltips to track their node positions after panning/zooming
+    function updatePersistentTooltipsPosition() {
+      document.querySelectorAll('.persistent-tooltip').forEach(tip => {
+        const ref = tip.dataset.ref;
+        const nodePos = network.getPositions([ref])[ref];
+        if (!nodePos) return;
+        const canvasCoords = network.canvasToDOM({ x: nodePos.x, y: nodePos.y });
+        tip.style.left = (canvasCoords.x + 10) + "px";
+        tip.style.top = (canvasCoords.y + 10) + "px";
+      });
+    }
