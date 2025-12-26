@@ -190,6 +190,18 @@
       }
     }
 
+    function updatePersistentTooltipsPosition() {
+      if (!network) return;
+      document.querySelectorAll('.persistent-tooltip').forEach(tip => {
+        const ref = tip.dataset.ref;
+        const nodePos = network.getPositions([ref])[ref];
+        if (!nodePos) return;
+        const canvasCoords = network.canvasToDOM({ x: nodePos.x, y: nodePos.y });
+        tip.style.left = (canvasCoords.x + 10) + "px";
+        tip.style.top = (canvasCoords.y + 10) + "px";
+      });
+    }
+
     function zoomIn() {
       if (network) {
         const scale = network.getScale();
@@ -518,17 +530,6 @@
         container.innerHTML = `<p style="color: red;">Error loading dependency graph: ${JSON.stringify(err)}</p>`;
       })
       .getErrorTracerData();
-  </script>
+</script>
 </body>
 </html>
-    // Updates persistent tooltips to track their node positions after panning/zooming
-    function updatePersistentTooltipsPosition() {
-      document.querySelectorAll('.persistent-tooltip').forEach(tip => {
-        const ref = tip.dataset.ref;
-        const nodePos = network.getPositions([ref])[ref];
-        if (!nodePos) return;
-        const canvasCoords = network.canvasToDOM({ x: nodePos.x, y: nodePos.y });
-        tip.style.left = (canvasCoords.x + 10) + "px";
-        tip.style.top = (canvasCoords.y + 10) + "px";
-      });
-    }
