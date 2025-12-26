@@ -10,49 +10,470 @@
       width: 100%;
       height: 500px;
       border: 1px solid lightgray;
+      position: relative;
+    }
+    .tooltip {
+      position: absolute;
+      background-color: #fff;
+      border: 1px solid #ccc;
+      padding: 8px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+      border-radius: 4px;
+      font-size: 12px;
+      max-width: 250px;
+      z-index: 1000;
+      pointer-events: auto;
+      user-select: none;
+      cursor: move;
+      display: none;
+    }
+    .menu-button {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: #eee;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      width: 24px;
+      height: 24px;
+      text-align: center;
+      line-height: 24px;
+      font-weight: bold;
+      font-size: 18px;
+      cursor: pointer;
+      user-select: none;
+      z-index: 1100;
+    }
+    .dropdown {
+      position: absolute;
+      top: 40px;
+      right: 10px;
+      background: white;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+      display: none;
+      flex-direction: column;
+      min-width: 140px;
+      z-index: 1100;
+    }
+    .dropdown a {
+      padding: 8px 12px;
+      color: #333;
+      text-decoration: none;
+      cursor: pointer;
+      user-select: none;
+      border-bottom: 1px solid #eee;
+    }
+    .dropdown a:last-child {
+      border-bottom: none;
+    }
+    .dropdown a:hover {
+      background-color: #f0f0f0;
+    }
+    .zoom-buttons {
+      position: absolute;
+      bottom: 10px;
+      right: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      z-index: 1100;
+    }
+    .zoom-button {
+      background: #eee;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      width: 32px;
+      height: 32px;
+      text-align: center;
+      line-height: 32px;
+      font-weight: bold;
+      font-size: 20px;
+      cursor: pointer;
+      user-select: none;
     }
   </style>
 </head>
 <body>
   <h1>Dependency Graph</h1>
+
   <div id="network"></div>
 
+  <div class="menu-button" id="menuButton" onclick="toggleDropdown()">⋮</div>
+  <div class="dropdown" id="menuDropdown">
+    <a href="#" onclick="toggleDetailsVisibility()">Show Details</a>
+    <a href="#" onclick="downloadAsImage()">Download PNG</a>
+    <a href="#" onclick="downloadAsPDF()">Download PDF</a>
+  </div>
+
+  <div class="zoom-buttons">
+    <div class="zoom-button" onclick="zoomIn()">+</div>
+    <div class="zoom-button" onclick="zoomOut()">-</div>
+  </div>
+
   <script>
-  // Fetch traced precedent data from backend Apps Script
-  google.script.run
-    .withSuccessHandler(drawDependencyGraph)
-    .withFailureHandler((err) => {
-      const container = document.getElementById('network');
-      container.innerHTML = `<p style="color: red;">Error loading dependency graph: ${JSON.stringify(err)}</p>`;
-    })
-    .getErrorTracerData();
+    let network;
+    let detailsVisible = false;
+    let dependencyData = {};
+    const tooltip = document.createElement("div");
+    tooltip.id = "tooltip";
+    tooltip.className = "tooltip";
+    document.body.appendChild(tooltip);
 
-  // Simple renderer for precedents using Vis.js
-  function drawDependencyGraph(data) {
-    const nodes = [];
-    const edges = [];
+    function makeTooltipDraggable(element) {
+      let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+      element.onmousedown = dragMouseDown;
 
-    // Add the selected cell node
-    nodes.push({ id: data.selectedRef, label: data.selectedRef });
+      function dragMouseDown(e) {
+        e = e || window.event;
+        e.preventDefault();
+        pos3 = e.clientX;
+        pos4 = e.clientY;
+        document.onmouseup = closeDragElement;
+        document.onmousemove = elementDrag;
+      }
 
-    // Add precedent nodes and edges
-    if (Array.isArray(data.precedents)) {
-      data.precedents.forEach((precedent) => {
-        nodes.push({ id: precedent, label: precedent });
-        edges.push({ from: precedent, to: data.selectedRef });
-      });
+      function elementDrag(e) {
+        e = e || window.event;
+        e.preventDefault();
+        pos1 = pos3 - e.clientX;
+        pos2 = pos4 - e.clientY;
+        pos3 = e.clientX;
+        pos4 = e.clientY;
+        element.style.top = (element.offsetTop - pos2) + "px";
+        element.style.left = (element.offsetLeft - pos1) + "px";
+      }
+
+      function closeDragElement() {
+        document.onmouseup = null;
+        document.onmousemove = null;
+      }
     }
 
-    // Render with Vis.js
-    const container = document.getElementById('network');
-    const graphData = { nodes: new vis.DataSet(nodes), edges: new vis.DataSet(edges) };
-    const options = {
-      layout: { hierarchical: { enabled: true, direction: 'LR' } },
-      physics: { enabled: false },
-      interaction: { hover: true }
-    };
-    new vis.Network(container, graphData, options);
-  }
-</script>
+    function adjustTooltipPosition(tooltipEl) {
+      const rect = tooltipEl.getBoundingClientRect();
+      const padding = 10;
+      let newLeft = rect.left;
+      let newTop = rect.top;
+      if (rect.right > window.innerWidth) {
+        newLeft = window.innerWidth - rect.width - padding;
+      }
+      if (rect.left < 0) {
+        newLeft = padding;
+      }
+      if (rect.bottom > window.innerHeight) {
+        newTop = window.innerHeight - rect.height - padding;
+      }
+      if (rect.top < 0) {
+        newTop = padding;
+      }
+      tooltipEl.style.left = newLeft + "px";
+      tooltipEl.style.top = newTop + "px";
+    }
+
+    function repositionAllTooltips() {
+      if (tooltip.style.display === "block") {
+        adjustTooltipPosition(tooltip);
+      }
+    }
+
+    function zoomIn() {
+      if (network) {
+        const scale = network.getScale();
+        network.moveTo({ scale: scale * 1.2 });
+      }
+    }
+
+    function zoomOut() {
+      if (network) {
+        const scale = network.getScale();
+        network.moveTo({ scale: scale / 1.2 });
+      }
+    }
+
+    function downloadAsImage() {
+      if (!network) return;
+      const canvas = network.canvas.frame.canvas;
+      const image = canvas.toDataURL("image/png");
+      const link = document.createElement("a");
+      link.href = image;
+      link.download = "dependency-graph.png";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    async function downloadAsPDF() {
+      if (!network) return;
+      // Load jsPDF dynamically
+      if (!window.jsPDF) {
+        await new Promise((resolve) => {
+          const script = document.createElement('script');
+          script.src = "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js";
+          script.onload = resolve;
+          document.head.appendChild(script);
+        });
+      }
+      const { jsPDF } = window.jspdf || window.jspdf || {};
+      if (!jsPDF) {
+        alert("Failed to load jsPDF library.");
+        return;
+      }
+      const canvas = network.canvas.frame.canvas;
+      const imgData = canvas.toDataURL("image/png");
+      const pdf = new jsPDF({
+        orientation: "landscape",
+        unit: "pt",
+        format: [canvas.width, canvas.height]
+      });
+      pdf.addImage(imgData, "PNG", 0, 0, canvas.width, canvas.height);
+      pdf.save("dependency-graph.pdf");
+    }
+
+    function toggleDropdown() {
+      const dropdown = document.getElementById('menuDropdown');
+      if (dropdown.style.display === 'flex') {
+        dropdown.style.display = 'none';
+      } else {
+        dropdown.style.display = 'flex';
+        dropdown.style.flexDirection = 'column';
+      }
+    }
+
+    function toggleDetailsVisibility() {
+      detailsVisible = !detailsVisible;
+      const dropdown = document.getElementById('menuDropdown');
+      const menuButton = document.getElementById('menuButton');
+      if (detailsVisible) {
+        dropdown.querySelector('a').textContent = 'Hide Details';
+      } else {
+        dropdown.querySelector('a').textContent = 'Show Details';
+      }
+      if (network && dependencyData) {
+        drawDependencyGraph(dependencyData);
+      }
+      dropdown.style.display = 'none';
+    }
+
+    // Close dropdown if clicked outside
+    document.addEventListener('click', function(event) {
+      const dropdown = document.getElementById('menuDropdown');
+      const menuButton = document.getElementById('menuButton');
+      if (!dropdown.contains(event.target) && !menuButton.contains(event.target)) {
+        dropdown.style.display = 'none';
+      }
+    });
+
+    // Main function to draw dependency graph
+    function drawDependencyGraph(data) {
+      dependencyData = data;
+
+      // Clear existing tooltip
+      tooltip.style.display = "none";
+      tooltip.innerHTML = "";
+
+      const nodes = [];
+      const edges = [];
+
+      // Extract selected cell info
+      const selectedRef = data.selectedRef || "";
+      const selectedSheet = selectedRef.split('!')[0] || "";
+      const precedents = Array.isArray(data.precedents) ? data.precedents : [];
+      const cellDetails = data.cellDetails || {};
+      const precedentLevels = data.precedentLevels || {};
+
+      // Helper to get sheet name from ref (e.g. 'Sheet1!A1' -> 'Sheet1')
+      function getSheetName(ref) {
+        const parts = ref.split('!');
+        return parts.length > 1 ? parts[0] : "";
+      }
+
+      // Build nodes for all precedents and selected cell
+      const allRefsSet = new Set(precedents);
+      allRefsSet.add(selectedRef);
+
+      // Add nodes with colors:
+      // Green for selected cell
+      // Blue for same sheet
+      // Orange for cross-sheet
+      // Red for errors (if cellDetails indicates error)
+
+      allRefsSet.forEach(ref => {
+        const sheet = getSheetName(ref);
+        const isSelected = ref === selectedRef;
+        const details = cellDetails[ref] || {};
+        const hasError = details.error === true || details.error === "true";
+        let color = "#1f77b4"; // default blue
+        if (isSelected) {
+          color = "#2ca02c"; // green
+        } else if (sheet !== selectedSheet) {
+          color = "#ff7f0e"; // orange
+        }
+        if (hasError) {
+          color = "#d62728"; // red
+        }
+
+        nodes.push({
+          id: ref,
+          label: ref,
+          color: {
+            background: color,
+            border: "#555"
+          },
+          font: { color: "#fff" },
+          shape: "box",
+          margin: 10
+        });
+      });
+
+      // Build edges: from precedent to selected cell and between precedents if levels exist
+      // Edges from all precedents to selected cell:
+      precedents.forEach(precedent => {
+        edges.push({
+          from: precedent,
+          to: selectedRef,
+          arrows: "to",
+          color: { color: "#888" }
+        });
+      });
+
+      // Additional edges based on precedentLevels (if provided)
+      if (precedentLevels && typeof precedentLevels === 'object') {
+        Object.entries(precedentLevels).forEach(([fromRef, toRefs]) => {
+          if (Array.isArray(toRefs)) {
+            toRefs.forEach(toRef => {
+              // Avoid duplicate edges to selectedRef (already added)
+              if (!(toRef === selectedRef && precedents.includes(fromRef))) {
+                edges.push({
+                  from: fromRef,
+                  to: toRef,
+                  arrows: "to",
+                  color: { color: "#bbb" },
+                  dashes: true
+                });
+              }
+            });
+          }
+        });
+      }
+
+      const container = document.getElementById('network');
+      container.innerHTML = ""; // Clear previous
+
+      const dataVis = {
+        nodes: new vis.DataSet(nodes),
+        edges: new vis.DataSet(edges)
+      };
+
+      const options = {
+        layout: {
+          hierarchical: {
+            enabled: true,
+            direction: 'RL',
+            sortMethod: 'directed',
+            nodeSpacing: 200,
+            levelSeparation: 150
+          }
+        },
+        physics: {
+          enabled: false
+        },
+        interaction: {
+          hover: true,
+          tooltipDelay: 200,
+          navigationButtons: false,
+          keyboard: false
+        },
+        nodes: {
+          shape: 'box',
+          font: {
+            size: 14,
+            color: '#fff'
+          },
+          margin: 10,
+          borderWidth: 1
+        },
+        edges: {
+          smooth: {
+            type: 'cubicBezier',
+            forceDirection: 'horizontal',
+            roundness: 0.4
+          },
+          arrows: {
+            to: { enabled: true, scaleFactor: 0.6 }
+          },
+          color: { color: '#888' }
+        }
+      };
+
+      network = new vis.Network(container, dataVis, options);
+
+      // Tooltip content for a node
+      function getTooltipContent(ref) {
+        const details = cellDetails[ref];
+        if (!details) return "<b>" + ref + "</b><br>No details available.";
+
+        let html = `<b>${ref}</b><br>`;
+        if (details.formula) {
+          html += `<b>Formula:</b> ${details.formula}<br>`;
+        }
+        if (details.value !== undefined) {
+          html += `<b>Value:</b> ${details.value}<br>`;
+        }
+        if (details.error) {
+          html += `<b style="color:red;">Error: ${details.error}</b><br>`;
+        }
+        if (details.note) {
+          html += `<b>Note:</b> ${details.note}<br>`;
+        }
+        if (details.sheet) {
+          html += `<b>Sheet:</b> ${details.sheet}<br>`;
+        }
+        if (details.address) {
+          html += `<b>Address:</b> ${details.address}<br>`;
+        }
+        return html;
+      }
+
+      // Show tooltip on node hover
+      network.on("hoverNode", function(params) {
+        const nodeId = params.node;
+        if (!nodeId) return;
+        const nodePosition = network.getPositions([nodeId])[nodeId];
+        if (!nodePosition) return;
+
+        // Convert canvas position to DOM coords
+        const canvasCoords = network.canvasToDOM({ x: nodePosition.x, y: nodePosition.y });
+
+        tooltip.innerHTML = getTooltipContent(nodeId);
+        tooltip.style.display = "block";
+        tooltip.style.left = (canvasCoords.x + 15) + "px";
+        tooltip.style.top = (canvasCoords.y + 15) + "px";
+        adjustTooltipPosition(tooltip);
+      });
+
+      network.on("blurNode", function() {
+        tooltip.style.display = "none";
+        tooltip.innerHTML = "";
+      });
+
+      // Make tooltip draggable
+      makeTooltipDraggable(tooltip);
+
+      // Reposition tooltip on window resize or scroll
+      window.addEventListener("resize", repositionAllTooltips);
+      window.addEventListener("scroll", repositionAllTooltips);
+    }
+
+    // Initial call to fetch data and draw graph
+    google.script.run
+      .withSuccessHandler(drawDependencyGraph)
+      .withFailureHandler((err) => {
+        const container = document.getElementById('network');
+        container.innerHTML = `<p style="color: red;">Error loading dependency graph: ${JSON.stringify(err)}</p>`;
+      })
+      .getErrorTracerData();
+  </script>
 </body>
 </html>
