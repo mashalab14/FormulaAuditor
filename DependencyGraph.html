@@ -475,6 +475,7 @@
 
       // Show tooltip on node hover
       network.on("hoverNode", function(params) {
+        if (detailsVisible) return; // Skip hover tooltip when persistent tooltips are shown
         const nodeId = params.node;
         if (!nodeId) return;
         const nodePosition = network.getPositions([nodeId])[nodeId];
