@@ -329,12 +329,20 @@
       const allRefsSet = new Set(precedents);
       allRefsSet.add(selectedRef);
 
-      // Add nodes with colors:
+      // Helper to compute node level for hierarchical layout
+      function getNodeLevel(ref, currentRef, levelMap, visited = new Set()) {
+        if (ref === currentRef || visited.has(ref)) return 0;
+        visited.add(ref);
+        const dependents = Object.entries(precedentLevels || {}).filter(([_, toRefs]) => toRefs.includes(ref));
+        if (dependents.length === 0) return 0;
+        return 1 + Math.max(...dependents.map(([parent]) => getNodeLevel(parent, currentRef, levelMap, visited)));
+      }
+
+      // Add nodes with colors and hierarchical levels:
       // Green for selected cell
       // Blue for same sheet
       // Orange for cross-sheet
       // Red for errors (if cellDetails indicates error)
-
       allRefsSet.forEach(ref => {
         const sheet = getSheetName(ref);
         const isSelected = ref === selectedRef;
@@ -349,10 +357,11 @@
         if (hasError) {
           color = "#d62728"; // red
         }
-
+        const level = getNodeLevel(ref, selectedRef, precedentLevels);
         nodes.push({
           id: ref,
           label: ref,
+          level,
           color: {
             background: color,
             border: "#555"
