@@ -478,9 +478,15 @@
           tip.style.top = (canvasCoords.y + 10) + "px";
           tip.style.display = "block";
           tip.dataset.ref = ref;
-          // Default relative offset from node
-          tip.dataset.offsetX = "10";
-          tip.dataset.offsetY = "10";
+          // Preserve offset if tooltip for this ref already exists
+          const existing = document.querySelector(`.persistent-tooltip[data-ref="${ref}"]`);
+          if (existing) {
+            tip.dataset.offsetX = existing.dataset.offsetX || "10";
+            tip.dataset.offsetY = existing.dataset.offsetY || "10";
+          } else {
+            tip.dataset.offsetX = "10";
+            tip.dataset.offsetY = "10";
+          }
           document.body.appendChild(tip);
           makeTooltipDraggable(tip);
           adjustTooltipPosition(tip);
