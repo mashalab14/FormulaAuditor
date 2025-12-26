@@ -338,7 +338,7 @@
         return 1 + Math.max(...dependents.map(([parent]) => getNodeLevel(parent, currentRef, levelMap, visited)));
       }
 
-      // Add nodes with colors and hierarchical levels:
+      // Add nodes with colors:
       // Green for selected cell
       // Blue for same sheet
       // Orange for cross-sheet
@@ -357,11 +357,9 @@
         if (hasError) {
           color = "#d62728"; // red
         }
-        const level = getNodeLevel(ref, selectedRef, precedentLevels);
         nodes.push({
           id: ref,
           label: ref,
-          level,
           color: {
             background: color,
             border: "#555"
@@ -416,7 +414,7 @@
           hierarchical: {
             enabled: true,
             direction: 'UD',
-            sortMethod: 'directed',
+            sortMethod: 'hubsize',
             nodeSpacing: 100,
             levelSeparation: 100
           }
