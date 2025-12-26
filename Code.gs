@@ -44,9 +44,9 @@ function showTraceErrors() {
 // F001-Precedence: Placeholder for Trace Precedents logic
 function showTracePrecedents() {
   const html = HtmlService.createHtmlOutputFromFile('DependencyGraph.html')
-    .setTitle('Trace Precedents')
-    .setWidth(400);
-  SpreadsheetApp.getUi().showSidebar(html);
+    .setWidth(800)
+    .setHeight(600);
+  SpreadsheetApp.getUi().showModalDialog(html, 'Trace Precedents');
 }
 /**
  * Shows the unified Formula Auditor sidebar with specified initial tab
