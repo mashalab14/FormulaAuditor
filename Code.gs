@@ -314,10 +314,12 @@ function parseFormula(formula) {
 }
 
 function extractReferences(formula) {
+  // Remove content inside quotes to avoid false positives like "C3"
+  const cleanedFormula = formula.replace(/"[^"]*"/g, '');
   const regex = /(?:'([^']+)'|([A-Za-z0-9_]+))?!?\$?([A-Z]+)\$?([0-9]+)/g;
   const references = new Set();
   let match;
-  while ((match = regex.exec(formula)) !== null) {
+  while ((match = regex.exec(cleanedFormula)) !== null) {
     const sheet = match[1] || match[2] || '';
     const col = match[3];
     const row = match[4];
