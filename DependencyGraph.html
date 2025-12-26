@@ -409,6 +409,31 @@
 
       network = new vis.Network(container, dataVis, options);
 
+      // Persistent tooltips for "Show Details"
+      if (detailsVisible) {
+        // Remove existing persistent tooltips
+        document.querySelectorAll('.persistent-tooltip').forEach(el => el.remove());
+
+        allRefsSet.forEach(ref => {
+          if (!cellDetails[ref]) return;
+          const nodePos = network.getPositions([ref])[ref];
+          if (!nodePos) return;
+          const canvasCoords = network.canvasToDOM({ x: nodePos.x, y: nodePos.y });
+
+          const tip = document.createElement("div");
+          tip.className = "tooltip persistent-tooltip";
+          tip.innerHTML = getTooltipContent(ref);
+          tip.style.left = (canvasCoords.x + 10) + "px";
+          tip.style.top = (canvasCoords.y + 10) + "px";
+          tip.style.display = "block";
+          document.body.appendChild(tip);
+          makeTooltipDraggable(tip);
+          adjustTooltipPosition(tip);
+        });
+      } else {
+        document.querySelectorAll('.persistent-tooltip').forEach(el => el.remove());
+      }
+
       // Tooltip content for a node
       function getTooltipContent(ref) {
         const details = cellDetails[ref];
